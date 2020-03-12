@@ -32,16 +32,14 @@ namespace BlazorBoilerplate.Server.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUserSession _userSession;
-        protected ITenantProvider _tenantProvider;
 
-        public ApiLogService(IConfiguration configuration, ApplicationDbContext db, IMapper autoMapper, UserManager<ApplicationUser> userManager, IHttpContextAccessor httpContextAccessor, IUserSession userSession, ITenantProvider tenantProvider)
+        public ApiLogService(IConfiguration configuration, ApplicationDbContext db, IMapper autoMapper, UserManager<ApplicationUser> userManager, IHttpContextAccessor httpContextAccessor, IUserSession userSession)
         {
             _db = db;
             _autoMapper = autoMapper;
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
             _userSession = userSession;
-            _tenantProvider = tenantProvider;
             // Calling Log from the API Middlware results in a disposed ApplicationDBContext. This is here to build a DB Context for logging API Calls
             // If you have a better solution please let me know.
             _optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
