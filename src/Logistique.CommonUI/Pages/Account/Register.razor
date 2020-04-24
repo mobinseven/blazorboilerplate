@@ -1,0 +1,164 @@
+﻿@page "/Register"
+@inject NavigationManager navigationManager
+@inject IAuthorizeApi IAuthorizeApi
+@inject AuthenticationStateProvider authStateProvider
+<Logo />
+<Title Show="true" CssClass="text-muted">ثبت نام</Title>
+<div class="col-md-4 m-2">
+    @switch (state)
+    {
+        case State.EnterPhoneNumber:
+            <h4 class="text-center mb-2 text-success">خوش آمدید</h4>
+            <h5 class="text-center mb-2">شماره همراهتان را وارد کنید</h5>
+            <div dir="ltr" class="input-group mb-3">
+                <input @bind="@registerParameters.PhoneNumber" class="form-control @(registerParameters.PhoneNumber.IsPhoneNumber()?"is-valid":"is-invalid")" placeholder="مثال: 09123456789" />
+                <div class="input-group-append">
+                    <span class="input-group-text" id="basic-addon1"><i class="fa fa-mobile-alt fa-fw"></i></span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block" @onclick="PhoneNumberCheck">
+                <span>بررسی شماره</span>
+                <i class="fa fa-search fa-fw m-1"></i>
+            </button>
+            break;
+        case State.SendVerification:
+            <h5 class="text-center mb-2">شماره همراه شما</h5>
+            <h4 class="text-center mb-2 text-success">@registerParameters.PhoneNumber</h4>
+            <h6>کدی با پیامک برای شما فرستاده خواهد شد. همراه خود را روشن نگاه دارید.</h6>
+            <button class="btn btn-primary btn-block" @onclick="@SendVerificationCode">
+                <span>ارسال کد</span>
+                <i class="fa fa-sms fa-fw m-1"></i>
+            </button>
+            break;
+        case State.VerificationSent:
+            <h5> کد فرستاده شده به شماره همراهتان را وارد کنید:</h5>
+            <div dir="ltr" class="input-group mb-3">
+                <input @bind="@registerParameters.VerificationCode" autocomplete="one-time-code" class="form-control" placeholder="XXXXXX" />
+                <div class="input-group-append">
+                    <span class="input-group-text"><i class="fa fa-hashtag fa-fw"></i></span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-block" @onclick="VerifyRegistrationCode">
+                <i class="fa fa-check fa-fw m-1"></i>
+            </button>
+            break;
+        case State.CorrectCode:
+            <h5 class="text-success"><i class="fa fa-check fa-fw"></i> شماره همراهتان با موفقیت تایید شد.</h5>
+            <h5>فرم زیر را تکمیل کنید:</h5>
+            <EditForm Model="@registerParameters" OnValidSubmit="@RegisterUser">
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.UserName" class="form-control" type="email" hidden disabled />
+                </div>
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.PhoneNumber" class="form-control" type="text" disabled />
+                </div>
+                <ValidationMessage For="@(() => registerParameters.FirstName)"></ValidationMessage>
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.FirstName" class="form-control" autocomplete="given-name" type="text" placeholder="نام" />
+                </div>
+                <ValidationMessage For="@(() => registerParameters.LastName)"></ValidationMessage>
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.LastName" class="form-control" autocomplete="family-name" type="text" placeholder="نام خانوادگی" />
+                </div>
+                <ValidationMessage For="@(() => registerParameters.Password)"></ValidationMessage>
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.Password" class="form-control" autocomplete="new-password" type="password" placeholder="گذرواژه" />
+                </div>
+                <ValidationMessage For="@(() => registerParameters.PasswordConfirm)" />
+                <div class="input-group mb-3">
+                    <input @bind="@registerParameters.PasswordConfirm" class="form-control" autocomplete="new-password" placeholder="تکرار گذرواژه" type="password" />
+                </div>
+                <button class="btn btn-success btn-block mb-3" type="submit">
+                    ساختن حساب کاربری
+                    <i class="fa fa-user-plus m-1"></i>
+                </button>
+                <DataAnnotationsValidator />
+            </EditForm>
+            break;
+        case State.Success:
+            <div class="card border-success mb-3">
+                <div class="card-body text-success text-center">
+                    <h5 class="card-title"><i class="fa fa-check-circle fa-4x"></i></h5>
+                    <p class="card-text">ثبت نام انجام شد.</p>
+                </div>
+            </div>
+            break;
+        case State.Waiting:<LoadingBackground />break;
+    }
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="alert alert-warning m-2" role="alert">
+            @Error
+        </div>
+    }
+</div>
+@code {
+    enum State
+    {
+        EnterPhoneNumber,
+        SendVerification,
+        VerificationSent,
+        CorrectCode,
+        Success,
+        Waiting
+    }
+    State state = State.EnterPhoneNumber;
+    string Error = "";
+    RegisterDto registerParameters { get; set; } = new RegisterDto();
+    async Task PhoneNumberCheck()
+    {
+        state = State.Waiting;
+        if (registerParameters.PhoneNumber.IsPhoneNumber())
+        {
+            if (await IAuthorizeApi.PhoneNumberExists(registerParameters.PhoneNumber))
+            {
+                state = State.EnterPhoneNumber;
+                Error = "با این شماره همراه پیش از این ثبت نام انجام شده.";
+            }
+            else
+            {
+                state = State.SendVerification; //State.CorrectCode;//
+            }
+        }
+        else
+        {
+            state = State.EnterPhoneNumber;
+            Error = "شماره همراه به درستی داده نشده.";
+        }
+    }
+    async Task SendVerificationCode()
+    {
+        state = State.Waiting;
+        ApiResponseDto response = await IAuthorizeApi.SendVerificationCode(registerParameters);
+        if (response.StatusCode == 200)
+        {
+            state = State.VerificationSent;
+        }
+        else
+        {
+            // Error = response.Message;
+            Error = "خطایی رخ داد. لطفا دوباره تلاش کنید.";
+        }
+    }
+
+    async Task VerifyRegistrationCode()
+    {
+        state = State.Waiting;
+        ApiResponseDto response = await IAuthorizeApi.VerifyRegistrationCode(registerParameters);
+        if (response.StatusCode == 200)
+        {
+            state = State.CorrectCode;
+        }
+        else if (response.StatusCode == 409)
+        {
+            Error = "کد واره شده درست نیست.";
+        }
+    }
+
+    async Task RegisterUser()
+    {
+        registerParameters.UserName = registerParameters.PhoneNumber;
+        await ((IdentityAuthenticationStateProvider)authStateProvider).Register(registerParameters);
+        navigationManager.NavigateTo(navigationManager.BaseUri, true);
+    }
+}

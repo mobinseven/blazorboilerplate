@@ -1,0 +1,73 @@
+[
+  {
+    "outputFileName": "wwwroot/bundle.css",
+    "inputFiles": [
+      "wwwroot/other/fontawesome/css/all.css",
+      "wwwroot/css/bootstrap/bootstrap.min.css",
+      "wwwroot/css/fonts.css",
+      "wwwroot/css/StyleSheet.css",
+      "wwwroot/css/persian-datepicker.min.css",
+      "wwwroot/other/DataTables/datatables.css",
+      "wwwroot/other/leaflet/leaflet.css",
+      "wwwroot/other/leaflet/MarkerCluster.css",
+      "wwwroot/other/leaflet/MarkerCluster.Default.css"
+    ],
+    "minify": {
+      "enabled": false
+    },
+    "sourceMap": true
+  },
+  {
+    "outputFileName": "wwwroot/bundle.min.css",
+    "inputFiles": [
+      "wwwroot/bundle.css"
+    ],
+    "minify": {
+      "enabled": true
+    },
+    "sourceMap": true
+  },
+  {
+    "outputFileName": "wwwroot/bundle.js",
+    "inputFiles": [
+      "wwwroot/javascript/jquery-3.4.1.min.js",
+      "wwwroot/javascript/popper.min.js",
+      "wwwroot/javascript/moment-with-locales.js",
+      "wwwroot/javascript/moment-jalaali.js",
+      "wwwroot/javascript/persian-date.js",
+      "wwwroot/javascript/persian-datepicker.js",
+      "wwwroot/javascript/hammer.js",
+      "wwwroot/other/DataTables/datatables.js",
+      "wwwroot/css/bootstrap/bootstrap.js",
+      "wwwroot/other/leaflet/leaflet.js",
+      "wwwroot/other/leaflet/leaflet.markercluster.js",
+      "wwwroot/javascript/color.js",
+      "wwwroot/javascript/palette.js",
+      "wwwroot/javascript/signalr.min.js",
+      "wwwroot/javascript/chatClient.js",
+      "wwwroot/javascript/jsInterops.js",
+      "wwwroot/javascript/SideNav.js",
+      "wwwroot/javascript/Utility.js",
+      "wwwroot/javascript/Title.js",
+      "wwwroot/javascript/leafletSetup.js",
+      "wwwroot/javascript/ScrollPosition.js",
+      "wwwroot/javascript/DataTable.js"
+    ],
+    "minify": {
+      "enabled": false,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/bundle.min.js",
+    "inputFiles": [
+      "wwwroot/bundle.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  }
+]

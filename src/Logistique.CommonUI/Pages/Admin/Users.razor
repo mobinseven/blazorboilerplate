@@ -1,0 +1,338 @@
+﻿@page "/admin/users"
+@using BlazorBoilerplate.Shared.Dto.Account
+@attribute [Authorize]
+@inject HttpClient Http
+@inject IAuthorizationService AuthorizationService
+@inject AuthenticationStateProvider authStateProvider
+@inject AppState appState
+
+<style>
+    html, body {
+        font-family: MyriadPro,Mitra,"Font Awesome 5 Free" !important;
+        direction: ltr;
+        text-align: left;
+    }
+</style>
+<h1>Users</h1>
+<p>User Management.</p>
+
+@if (users == null)
+{
+    <LoadingBackground ShowLogoBox="true">
+        <label>Loading Users</label>
+    </LoadingBackground>
+}
+else
+{
+    <table class="table table-striped table-bordered table-sm">
+        <thead>
+            <tr>
+                <th><button class="btn btn-outline-primary btn-block" @onclick="@(e => { createUserDialogOpen = true; })"><i class="fa fa-user-plus fa-fw"></i></button></th>
+                <th>User Name</th>
+                <th>Phone</th>
+                <th>Roles</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var UserRow in users)
+            {
+                <tr>
+                    <td>
+                        <div class="btn-group btn-block" role="group" dir="ltr">
+                            <AuthorizeView Policy="@Policies.IsAdmin" Context="AuthorizeContext">
+                                <button class="btn btn-outline-success" @onclick="@(() => OpenEditDialog(UserRow.UserId))"><i class="fa fa-edit fa-fw"></i></button>
+                                <button class="btn btn-outline-secondary" @onclick="@(() => OpenResetPasswordDialog(UserRow.UserName, UserRow.UserId))"><i class="fa fa-undo f-fw"></i></button>
+                                <button class="btn btn-outline-danger" @onclick="@(() => OpenDeleteDialog(UserRow.UserId))"><i class="fa fa-trash fa-fw"></i></button>
+                            </AuthorizeView>
+                        </div>
+                    </td>
+
+                    <td><div style="width:130px;">@UserRow.UserName</div></td>
+                    <td>@UserRow.PhoneNumber</td>
+                    <td>
+                        <span>
+                            @foreach (var role in @UserRow.Roles)
+                            {
+                                <span class="badge badge-secondary">@role</span>
+                            }
+                        </span>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+<div class="col-md-4 mt-4 mb-5 align-self-center">
+    @if (createUserDialogOpen)
+    {
+        <h3>Create User</h3>
+        <EditForm Model="@registerParameters" OnValidSubmit="@CreateUserAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <fieldset>
+                <div class="form-group">
+                    <input @bind="@registerParameters.UserName" placeholder="User Name" />
+                </div>
+                <div class="form-group">
+                    <input @bind="@registerParameters.PhoneNumber" placeholder="PhoneNumber" />
+                </div>
+                <div class="form-group">
+                    <input @bind="@registerParameters.Password" placeholder="Password" />
+                </div>
+                <div class="form-group">
+                    <input @bind="@registerParameters.PasswordConfirm" placeholder="Password Confirmation" />
+                </div>
+            </fieldset>
+        </EditForm>
+        <button class="btn btn-secondary" @onclick="@(e => { createUserDialogOpen = false; })"><i class="fa fa-times fa-fw"></i></button>
+        <button class="btn btn-success" @onclick="@CreateUserAsync"><i class="fa fa-plus fa-fw"></i></button>
+    }
+    @if (editDialogOpen)
+    {
+        <h3>Edit User</h3>
+        <EditForm Model="@user" OnValidSubmit="@UpdateUserAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <fieldset>
+                <div class="form-group">
+                    <label>User Name</label>
+                    <input @bind="@user.UserName" placeholder="User Name" />
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input @bind="@user.PhoneNumber" placeholder="PhoneNumber" />
+                </div>
+                <div class="form-group">
+                    <label>Roles</label>
+                    <div class="row">
+                        @foreach (var role in roleSelections.OrderBy(x => x.Name))
+                        {
+                            <button class="btn btn-light" @onclick="@(()=>UpdateUserRole(role))"><i class="fa fa-@( (role.IsSelected) ? "check" : "")"></i> @role.Name</button>
+                        }
+                    </div>
+                </div>
+            </fieldset>
+        </EditForm>
+        <button class="btn btn-secondary" @onclick="@(e => { editDialogOpen = false; })"><i class="fa fa-times fa-fw"></i></button>
+        <button class="btn btn-success" @onclick="@UpdateUserAsync"><i class="fa fa-edit fa-fw"></i></button>
+    }
+    @if (deleteUserDialogOpen)
+    {
+        <h3>Confirm Delete @user.UserName</h3>
+        <button class="btn btn-secondary" @onclick="@(e => { deleteUserDialogOpen = false; })"><i class="fa fa-times fa-fw"></i></button>
+        <button class="btn btn-danger" @onclick="@DeleteUserAsync"><i class="fa fa-trash fa-fw"></i></button>
+    }
+    @if (resetPasswordDialogOpen)
+    {
+        <EditForm Model="@registerParameters" OnValidSubmit="@ResetUserPasswordAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <fieldset>
+                <div class="form-group">
+                    <input @bind="@registerParameters.Password" placeholder="Password" />
+                </div>
+                <div class="form-group">
+                    <input @bind="@registerParameters.PasswordConfirm" placeholder="Password Confirmation" />
+                </div>
+            </fieldset>
+        </EditForm>
+        <button class="btn btn-secondary" @onclick="@(e => { resetPasswordDialogOpen = false; })"><i class="fa fa-times fa-fw"></i></button>
+        <button class="btn btn-success" @onclick="@ResetUserPasswordAsync"><i class="fa fa-undo f-fw"></i></button>
+    }
+</div>
+@code {
+
+    int pageSize { get; set; } = 15;
+    int currentPage { get; set; } = 0;
+
+    bool createUserDialogOpen = false;
+    bool editDialogOpen = false;
+    bool deleteUserDialogOpen = false;
+    bool createRoleDialogOpen = false;
+    bool resetPasswordDialogOpen = false;
+
+    ApiResponseDto apiResponse;
+    List<UserInfoDto> users;
+    List<RoleSelection> roleSelections { get; set; } = new List<RoleSelection>();
+
+    public UserInfoDto user { get; set; } = new UserInfoDto(); // Holds user being actively modified or created
+    RegisterDto registerParameters { get; set; } = new RegisterDto();
+
+    UserProfileDto userProfile = new UserProfileDto();
+
+    public class RoleSelection
+    {
+        public bool IsSelected { get; set; }
+        public string Name { get; set; }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RetrieveUserListAsync();
+        await PopulateRoleList();
+        userProfile = await appState.GetUserProfile();
+    }
+
+    public async Task RetrieveUserListAsync()
+    {
+        string queryString = "?pageSize=" + pageSize.ToString() + "&pageNumber=" + currentPage.ToString(); // this is to support pagination in the future, need to integrate with MatTable
+        apiResponse = await Http.GetJsonAsync<ApiResponseDto>("api/Admin/Users" + queryString);
+
+        if (apiResponse.StatusCode == 200)
+        {
+            //matToaster.Add(apiResponse.Message, MatToastType.Success, "Users Retrieved");
+            users = Newtonsoft.Json.JsonConvert.DeserializeObject<List<UserInfoDto>>(apiResponse.Result.ToString());
+        }
+        else
+        {
+            //matToaster.Add(apiResponse.Message + " : " + apiResponse.StatusCode, MatToastType.Danger, "User Retrieval Failed");
+        }
+    }
+
+    public void OpenEditDialog(Guid userId)
+    {
+        user = new UserInfoDto(); // reset user object
+        user = users.Where(x => x.UserId == userId).FirstOrDefault();  // load the user information into the temp user object for worry free editing
+        foreach (var role in roleSelections)
+        {
+            if (user.Roles.Contains(role.Name))
+            {
+                role.IsSelected = true;
+            }
+            else
+            {
+                role.IsSelected = false;
+            }
+        }
+        this.editDialogOpen = true;
+    }
+
+    public void OpenResetPasswordDialog(string userName, Guid userId)
+    {
+        // reusing the registerParameters and User objects
+        registerParameters = new RegisterDto();  // reset object
+        registerParameters.UserName = userName;
+        user.UserId = userId;
+        this.resetPasswordDialogOpen = true;
+    }
+
+    public void OpenDeleteDialog(Guid userId)
+    {
+        user = users.Where(x => x.UserId == userId).FirstOrDefault();
+        this.deleteUserDialogOpen = true;
+    }
+
+    protected void UpdateUserRole(RoleSelection roleSelectionItem)
+    {
+        roleSelectionItem.IsSelected = !roleSelectionItem.IsSelected;
+    }
+
+    public async Task PopulateRoleList()
+    {
+        List<string> roleNames = new List<string>();
+        var response = await Http.GetJsonAsync<ApiResponseDto>("api/Account/ListRoles");
+        try
+        {
+            roleNames = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(response.Result.ToString());
+        }
+        catch (Exception ex)
+        {
+            //matToaster.Add("Error", MatToastType.Danger, ex.Message);
+            return;
+        }
+
+        roleSelections = new List<RoleSelection>();// clear out list
+
+        // initialize selection list with all un-selected
+        foreach (string role in roleNames)
+        {
+            roleSelections.Add(new RoleSelection
+            {
+                Name = role,
+                IsSelected = false
+            });
+        }
+    }
+
+    public async Task UpdateUserAsync()
+    {
+        try
+        {
+            //update the user object's role list with the new selection set
+            user.Roles = roleSelections.Where(x => x.IsSelected == true).Select(x => x.Name).ToList();
+
+            var apiResponse = await Http.PutJsonAsync<ApiResponseDto>("api/Account", user);
+            if (apiResponse.StatusCode == 200)
+            {
+                //matToaster.Add("User Updated", MatToastType.Success);
+            }
+            else
+            {
+                //matToaster.Add("Error", MatToastType.Danger, apiResponse.StatusCode.ToString());
+            }
+            editDialogOpen = false;
+        }
+        catch (Exception ex)
+        {
+            //matToaster.Add(ex.Message, MatToastType.Danger, "User Update Failed");
+        }
+    }
+
+    public async Task CreateUserAsync()
+    {
+        if (registerParameters.Password == registerParameters.PasswordConfirm)
+        {
+
+            ApiResponseDto apiResponse = await ((IdentityAuthenticationStateProvider)authStateProvider).Create(registerParameters);
+            if (apiResponse.StatusCode == 200)
+            {
+                //matToaster.Add(apiResponse.Message, MatToastType.Success);
+                user = Newtonsoft.Json.JsonConvert.DeserializeObject<UserInfoDto>(apiResponse.Result.ToString());
+                users.Add(user);
+                registerParameters = new RegisterDto(); //reset create user object after insert
+                createUserDialogOpen = false;
+            }
+            else
+            {
+                //matToaster.Add(apiResponse.Message + " : " + apiResponse.StatusCode, MatToastType.Danger, "User Creation Failed");
+            }
+        }
+    }
+
+    public async Task ResetUserPasswordAsync()
+    {
+        if (registerParameters.Password != registerParameters.PasswordConfirm)
+        {
+            //matToaster.Add("Passwords Must Match", MatToastType.Warning);
+        }
+        else
+        {
+            apiResponse = await Http.PostJsonAsync<ApiResponseDto>("api/Account/AdminUserPasswordReset/" + user.UserId.ToString(), registerParameters.Password);
+            if (apiResponse.StatusCode == 204 || apiResponse.StatusCode == 200)
+            {
+                //matToaster.Add("Password Reset", MatToastType.Success, apiResponse.Message);
+            }
+            else
+            {
+                //matToaster.Add(apiResponse.Message, MatToastType.Danger);
+            }
+            resetPasswordDialogOpen = false;
+        }
+    }
+
+    public async Task DeleteUserAsync()
+    {
+        var response = await Http.DeleteAsync("api/Account/" + user.UserId);
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            //matToaster.Add("User Deleted", MatToastType.Success);
+            users.Remove(user);
+            deleteUserDialogOpen = false;
+            StateHasChanged();
+        }
+        else
+        {
+            //matToaster.Add("User Delete Failed", MatToastType.Danger);
+        }
+    }
+}

@@ -1,0 +1,49 @@
+﻿@page "/forum"
+@attribute [Authorize]
+@inject IAuthorizationService AuthorizationService
+@inherits ForumPageModel
+@inject HttpClient Http
+<Title>پیام‌رسان</Title>
+<style>
+    #scroller * {
+        /* don't allow the children of the scrollable element to be selected as an anchor node */
+        overflow-anchor: none;
+    }
+
+    #anchor {
+        /* allow the final child to be selected as an anchor node */
+        overflow-anchor: auto;
+        /* anchor nodes are required to have non-zero area */
+        height: 1px;
+    }
+</style>
+
+<div id="scroller">
+    @if (Messages == null)
+    {
+        <LoadingBackground ShowLogoBox="true"></LoadingBackground>
+    }
+    else if (Messages.Count == 0)
+    {
+        <span>بدون پیام.</span>
+    }
+    else
+    {
+        {
+            Messages.Sort((x, y) => x.When.CompareTo(y.When));
+        }
+        @foreach (var message in Messages)
+        {
+            <ForumMessage Message="@message" />
+        }
+    }
+    <div class="MessageCreateForm"> <ForumMessageCreateForm Send="Send" /></div>
+    <div id="anchor"></div>
+</div>
+@inject IJSRuntime JSRuntime
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        JSRuntime.InvokeVoidAsync("ScrollToBottom");
+    }
+}

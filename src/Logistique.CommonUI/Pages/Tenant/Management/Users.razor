@@ -1,0 +1,254 @@
+﻿@page "/users"
+@attribute [Authorize(Permissions.Tenant.Manager)]
+@inject HttpClient Http
+@inject IAuthorizationService AuthorizationService
+@inject AuthenticationStateProvider authStateProvider
+@inject IAuthorizeApi IAuthorizeApi
+@inject ITenantApi tenantApi
+@inject IJSRuntime JsRuntime
+<Title Show="true">کاربران @tenantApi.Tenant.Title</Title>
+
+<div class="align-self-center">
+    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#InviteUserModal">
+        <span class="">فراخوانی کاربر جدید</span>
+        <i class="fa fa-user-plus fa-fw m-1"></i>
+    </button>
+</div>
+<div class="list-group col-md-8">
+    @foreach (var UserRow in users)
+    {
+        <div class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">@UserRow.FullName</h5>
+
+                <a role="button" data-toggle="modal" data-target="#UserDetailsModal" @onclick="@(e=>SelectedUser=UserRow)">
+                    <span class="fa-stack">
+                        <i class="fa fa-circle fa-stack-2x"></i>
+                        <i id="NavButton" class="fa fa-ellipsis-h fa-stack-1x fa-inverse"></i>
+                    </span>
+                </a>
+            </div>
+            <small class="text-muted">@UserRow.UserName</small>
+        </div>
+    }
+    @foreach (var invitation in invitations)
+    {
+        <div class="list-group-item list-group-item-action">
+            <h5 class="mb-1">@invitation.PhoneNumber</h5>
+            <p class="mb-1">دعوتنامه فرستاده شد.</p>
+            <div class="d-flex w-100 justify-content-between">
+                <div class="d-flex align-items-center"><small class="DateFromNow" data-content="@invitation.SentAt"></small></div>
+                <a role="button" data-toggle="modal" data-target="#CancelInvitationModal" @onclick="@(e=>SelectedInvitation=invitation)">
+                    <span class="fa-stack">
+                        <i class="fa fa-circle fa-stack-2x"></i>
+                        <i id="NavButton" class="fa fa-comment-slash fa-stack-1x fa-inverse"></i>
+                    </span>
+                </a>
+            </div>
+        </div>
+    }
+</div>
+<!-- Modal -->
+<div class="modal fade" id="UserDetailsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">پرونده‌ی @SelectedUser.FullName</h5>
+            </div>
+            <div class="modal-body">
+                <p><small class="text-muted">همراه:&nbsp;</small>@SelectedUser.PhoneNumber</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="InviteUserModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">فراخوانی کاربر جدید به @tenantApi.Tenant.Title</h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" role="alert">
+                    کدی با پیامک برای کاربر فرستاده خواهد شد.
+                </div>
+                <div class="input-group mb-3">
+                    <input class="form-control" @bind="@SelectedUser.PhoneNumber" placeholder="شماره همراه کاربر" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+                <button type="button" class="btn btn-success" data-dismiss="modal" @onclick="SendInvitation">
+                    فرستادن دعوتنامه
+                    <i class="fa fa-sms fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="CancelInvitationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">لغو فراخوانی کاربر</h5>
+            </div>
+            <div class="modal-body">
+                <p>آیا از لغو فراخوانی کاربر مطمئنید؟</p>
+                <p>@SelectedInvitation.PhoneNumber</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="CancelInvitation">
+                    بله
+                    <i class="fa fa-comment-slash fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="RemoveUserModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">حذف کاربر</h5>
+            </div>
+            <div class="modal-body">
+                <p>آیا از حذف این کاربر مطمئنید؟</p>
+                <p>@SelectedUser.FullName</p>
+                <p>@SelectedUser.PhoneNumber</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="RemoveTenantUser">
+                    بله
+                    <i class="fa fa-handshake-slash fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="ErrorModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">خطایی رخ داد</h5>
+            </div>
+            <div class="modal-body">
+                @Error
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-block" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@code{
+    List<UserInfoDto> users = new List<UserInfoDto>();
+    List<SmsInvitation> invitations = new List<SmsInvitation>();
+    UserInfoDto SelectedUser = new UserInfoDto();
+    SmsInvitation SelectedInvitation = new SmsInvitation();
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private string _error = null;
+    string Error
+    {
+        get
+        {
+            return _error;
+        }
+        set
+        {
+            _error = value;
+            JsRuntime.InvokeVoidAsync("Modal.Show", "ErrorModal");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JsRuntime.InvokeVoidAsync("DateFromNow");
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await tenantApi.GetTenant();
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("api/Admin/Users");
+
+        if (apiResponse.StatusCode == 200)
+        {
+            users = Newtonsoft.Json.JsonConvert.DeserializeObject<List<UserInfoDto>>(apiResponse.Result.ToString());
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            users.Remove(users.Single(u => u.UserName == user.Identity.Name)); // Thou shalt not remove thyself!
+        }
+        else
+        {
+            Error = apiResponse.Message;
+        }
+        apiResponse = await Http.GetJsonAsync<ApiResponseDto>("api/Sms/Invitations");
+
+        if (apiResponse.StatusCode == 200)
+        {
+            invitations = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SmsInvitation>>(apiResponse.Result.ToString());
+        }
+        else
+        {
+            Error = apiResponse.Message;
+        }
+    }
+    async Task SendInvitation()
+    {
+        LoginDto smsDto = new LoginDto { PhoneNumber = SelectedUser.PhoneNumber };
+        ApiResponseDto response = await Http.PostJsonAsync<ApiResponseDto>($"api/Sms/SendInvitationCode", smsDto);
+        if (response.StatusCode == 200)
+        {
+            invitations.Add(Newtonsoft.Json.JsonConvert.DeserializeObject<SmsInvitation>(response.Result.ToString()));
+        }
+        else
+        {
+            Error = response.Message;
+        }
+    }
+    async Task CancelInvitation()
+    {
+        var response = await Http.DeleteAsync($"api/Sms/CancelInvitation/{SelectedInvitation.Id}");
+        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            invitations.Remove(invitations.Single(i => i.Id == SelectedInvitation.Id));
+        }
+        else
+        {
+            Error = response.StatusCode.ToString();
+        }
+    }
+
+    public async Task RemoveTenantUser()
+    {
+        var apiResponse = await Http.DeleteAsync($"api/Tenants/RemoveUser/{SelectedUser.UserId}");
+        if (apiResponse.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            users.Remove(SelectedUser);
+        }
+        else
+        {
+            Error = apiResponse.StatusCode.ToString();
+        }
+    }
+}

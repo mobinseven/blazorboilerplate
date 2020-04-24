@@ -1,0 +1,56 @@
+﻿@using BlazorBoilerplate.Shared.Dto.Sample
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm OnValidSubmit="CreateMessage" Model="@messageDto" autocomplete="off">
+    <div class="card-footer">
+        <div class="input-group">
+            @if (Creating)
+            {
+                <button style="width:100%;" class="btn btn-light">
+                    <span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Creating...
+                </button>
+            }
+            else
+            {
+                <div class="input-group-append">
+                    <button id="messageCreate"
+                            class="btn btn-dark"
+                            ref="createButton"
+                            type="submit">
+                        <i class="fa fa-send fa-fw fa-inverse"></i>
+                    </button>
+                </div>
+                <input class="form-control"
+                       placeholder="پیام..."
+                       aria-label="Message"
+                       @bind="@messageDto.Text" />
+                @* https://chrissainty.com/a-detailed-look-at-data-binding-in-blazor/ *@
+                @* https://docs.microsoft.com/en-us/aspnet/core/blazor/forms-validation?view=aspnetcore-3.0 *@
+                @* https://remibou.github.io/Using-the-Blazor-form-validation/ *@
+
+            }
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    MessageDto messageDto { get; set; } = new MessageDto();
+
+    [Parameter]
+    public Func<MessageDto, Task> Send { get; set; }
+
+    bool IsOpened { get; set; }
+
+    bool Creating { get; set; } = false;
+
+    async Task CreateMessage()
+    {
+        Creating = true;
+        StateHasChanged();
+        await Send(messageDto);
+        messageDto.Text = "";
+        Creating = false;
+        StateHasChanged();
+    }
+}

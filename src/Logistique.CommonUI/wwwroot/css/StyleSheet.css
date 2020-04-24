@@ -1,0 +1,327 @@
+﻿html, body {
+    font-family: Mitra,MyriadPro,"Font Awesome 5 Free" !important;
+    direction: rtl;
+    font-size: larger;
+    text-align: justify;
+    table-layout: fixed;
+    background-color: #fff;
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.btn-icon {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: x-large;
+}
+
+.fa-circle {
+    text-shadow: 3px 3px 7px #444;
+}
+
+td, th {
+    width: auto;
+}
+
+    td.min, th.min {
+        width: 1%;
+        white-space: nowrap;
+    }
+
+.form-signin {
+    width: 100%;
+    max-width: 330px;
+    padding: 15px;
+    margin: 0 auto;
+}
+
+.dataTables_filter {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+}
+
+    .dataTables_filter label {
+        width: 100%;
+    }
+
+    .dataTables_filter input {
+        text-align: center;
+        width: 100%;
+        margin: 1px;
+        color: #495057;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        transition-property: border-color, box-shadow;
+        transition-duration: 0.15s, 0.15s;
+        transition-timing-function: ease-in-out, ease-in-out;
+        transition-delay: 0s, 0s;
+        padding: 5px;
+        color: #aaa;
+        font-family: BNazanin, FontAwesome;
+    }
+/* sort icons
+table.dataTable thead .sorting:before,
+table.dataTable thead .sorting_asc:before,
+table.dataTable thead .sorting_desc:before,
+table.dataTable thead .sorting_asc_disabled:before,
+table.dataTable thead .sorting_desc_disabled:before {
+    right: 0 !important;
+    content: "" !important;
+}
+
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_desc:after,
+table.dataTable thead .sorting_asc_disabled:after,
+table.dataTable thead .sorting_desc_disabled:after {
+    right: 0 !important;
+    content: "" !important;
+}
+
+table.dataTable thead th {
+    position: relative;
+    background-image: none !important;
+}
+
+    table.dataTable thead th.sorting:after,
+    table.dataTable thead th.sorting_asc:after,
+    table.dataTable thead th.sorting_desc:after {
+        position: absolute !important;
+        top: 12px !important;
+        right: 8px !important;
+        display: block !important;
+        font-family: "Font Awesome 5 Free" !important;
+    }
+
+    table.dataTable thead th.sorting:after {
+        content: "\f0dc" !important;
+        color: #ddd !important;
+        font-size: 0.8em !important;
+        padding-top: 0.12em !important;
+    }
+
+    table.dataTable thead th.sorting_asc:after {
+        content: "\f0de" !important;
+    }
+
+    table.dataTable thead th.sorting_desc:after {
+        content: "\f0dd" !important;
+    } */
+/*************************************/
+aside, app {
+    display: flex;
+    flex-flow: column;
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+    align-items: center;
+    justify-content: center;
+}
+
+    app header {
+        flex: 0 1 auto;
+    }
+
+    app section {
+        flex: 1 1 auto;
+        overflow: auto;
+        overflow-x: hidden;
+        align-self: stretch;
+    }
+
+    app footer {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        z-index: 1001;
+    }
+
+.commands {
+    position: fixed;
+    bottom: 15px;
+    left: 15px;
+    z-index: 20;
+}
+
+.sidenav {
+    height: 100%;
+    width: 100vw;
+    position: fixed;
+    bottom: 100vh;
+    right: 0;
+    z-index: 98;
+    background-color: #fff;
+    overflow-x: hidden;
+    transition: 0.5s;
+}
+
+.toast {
+    display: none;
+    position: absolute;
+    top: 5%;
+    left: 50%;
+    transform: translate(-50%, -5%); /**/
+    z-index: 50;
+    backdrop-filter: blur(100px);
+    -webkit-backdrop-filter: blur(100px);
+    box-shadow: 5px 10px 50px #888888;
+}
+
+.toast-body {
+    font-size: larger;
+}
+
+.tooltip {
+    pointer-events: none;
+    font-family: inherit !important;
+}
+
+.h-inherit {
+    height: inherit !important;
+}
+
+.flex-container {
+    display: -webkit-box; /* OLD - iOS 6-, Safari 3.1-6 */
+    display: -moz-box; /* OLD - Firefox 19- (buggy but mostly works) */
+    display: -ms-flexbox; /* TWEENER - IE 10 */
+    display: -webkit-flex; /* NEW - Chrome */
+    display: flex; /* NEW, Spec - Opera 12.1, Firefox 20+ */
+    -ms-flex-direction: column;
+    -moz-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+}
+
+.flex-filler {
+    -webkit-box-flex: 1; /* OLD - iOS 6-, Safari 3.1-6 */
+    -moz-box-flex: 1; /* OLD - Firefox 19- */
+    -webkit-flex: 1; /* Chrome */
+    -ms-flex: 1; /* IE 10 */
+    flex: 1 1 0; /* NEW, */
+}
+
+/* Reconnect Modal */
+#components-reconnect-modal > div {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    overflow: hidden;
+    background-color: #fff;
+    opacity: 0.9;
+    text-align: center;
+    font-weight: bold;
+    padding-top: 200px;
+}
+
+.components-reconnect-hide > div {
+    display: none;
+}
+
+.components-reconnect-show > div {
+    display: none;
+}
+
+.components-reconnect-show > .show {
+    display: block;
+}
+
+.components-reconnect-failed > div {
+    display: none;
+}
+
+.components-reconnect-failed > .failed {
+    display: block;
+}
+
+.components-reconnect-rejected > div {
+    display: none;
+}
+
+.components-reconnect-rejected > .rejected {
+    display: block;
+}
+
+*[data-count]:after {
+    position: absolute;
+    left: 0%;
+    bottom: 1%;
+    content: attr(data-count);
+    font-size: .6em;
+    padding: .3em;
+    border-radius: 50%;
+    line-height: .6em;
+    color: white;
+    background: rgba(255,0,0,.85);
+    text-align: center;
+    font-weight: bold;
+}
+
+/* https://www.geoapify.com/create-custom-map-marker-icon/ */
+.marker-pin {
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 0;
+    background: #c30b82;
+    position: absolute;
+    transform: rotate(-45deg);
+    left: 50%;
+    top: 50%;
+    margin: -15px 0 0 -15px;
+}
+
+    .marker-pin::after {
+        content: '';
+        width: 24px;
+        height: 24px;
+        margin: 3px;
+        background: #fff;
+        position: absolute;
+        border-radius: 50%;
+    }
+
+.custom-div-icon {
+    font-size: 18px;
+}
+
+    .custom-div-icon i {
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin: 10px auto;
+        text-align: center;
+        display: inline-block;
+        font-style: normal;
+        font-variant: normal;
+        text-rendering: auto;
+        line-height: 1;
+        font-weight: 900;
+        margin: 13px auto;
+    }
+
+        .custom-div-icon i.fa {
+            margin: 15px auto;
+        }

@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager navigationManager
+@inject AppState appState
+@inject IJSRuntime JSRuntime
+<aside id="SideNav" class="sidenav">
+    <Logo />
+    <NavMenu />
+</aside>
+<section>
+    @Body
+</section>
+<footer>
+    <a role="button" href="javascript:;" @onclick="@(e=>appState.ToggleNavState())">
+        <span class="fa-stack">
+            <i class="fa fa-circle fa-stack-2x"></i>
+            <i id="NavButton" class="fa fa-bars fa-stack-1x fa-inverse"></i>
+        </span>
+    </a>
+</footer>
+
+@code {
+    protected override void OnInitialized()
+    {
+        appState.jsRuntime = JSRuntime;
+    }
+}

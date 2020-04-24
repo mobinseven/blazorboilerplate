@@ -1,0 +1,44 @@
+﻿@page "/acceptinvitation"
+@attribute [Authorize]
+@inject HttpClient Http
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager navigationManager
+<Logo />
+<Title Show="true" CssClass="text-success">پذیرش دعوت</Title>
+<div class="col-md-4 m-2">
+    <div class="input-group mb-3">
+        <input type="text" @bind="@dto.PhoneNumber" placeholder="همراهی که کد فراخوانی به آن فرستاده شده" class="form-control" autocomplete="username">
+    </div>
+    <div class="input-group mb-3">
+        <input type="text" @bind="@dto.VerificationCode" placeholder="کد فراخوانی" class="form-control" autocomplete="one-time-code">
+    </div>
+    <div class="alert alert-info" role="alert">
+        در صورت درست بودن کد از برنامه خارج خواهید شد تا دوباره وارد شوید.
+    </div>
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="alert alert-warning" role="alert">
+            @Error
+        </div>
+    }
+    <button type="submit" class="btn btn-primary btn-block mb-3" @onclick="VerifyInvitationCode">
+        <i class="fa fa-check fa-fw m-1"></i>
+    </button>
+</div>
+@code{
+    LoginDto dto = new LoginDto();
+    string Error = null;
+    async Task VerifyInvitationCode()
+    {
+        ApiResponseDto response = await Http.PostJsonAsync<ApiResponseDto>($"api/Sms/VerifyInvitationCode", dto);
+        if (response.StatusCode == 200)
+        {
+            await ((IdentityAuthenticationStateProvider)authStateProvider).Logout();
+            navigationManager.NavigateTo("Login");
+        }
+        else
+        {
+            Error = response.Message;
+        }
+    }
+}

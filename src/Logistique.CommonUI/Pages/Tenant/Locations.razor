@@ -1,0 +1,393 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div style="position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 20;pointer-events: none;
+" class="d-flex flex-column">
+    <div class="input-group input-group-sm align-self-center p-0 mb-1  rounded-sm bg-white shadow-sm" style="pointer-events: all;">
+        <BlazoredTypeahead placeholder="جستجوی خیابان، محله و ..." SearchMethod="SearchLocation" @bind-Value="SelectedLocation" MinimumLength="3">
+            <SelectedTemplate>
+                @context.Title
+                @{
+                    string details = LocationDetails(context);
+                    if (!string.IsNullOrWhiteSpace(details))
+                    {
+                        <br />
+                        <span style="font-size:60%">@details</span>
+                    }
+                }
+            </SelectedTemplate>
+            <ResultTemplate>
+                @context.Title
+                @{
+                    string details = LocationDetails(context);
+                    if (!string.IsNullOrWhiteSpace(details))
+                    {
+                        <br />
+                        <span style="font-size:60%">@details</span>
+                    }
+                }
+            </ResultTemplate>
+        </BlazoredTypeahead>
+    </div>
+    <div class="p-1 align-self-start" style="pointer-events: all;">
+        <a role="button" href="javascript:;" class="btn-icon" data-toggle="modal" data-target="#LocationsModal">
+            <span class="fa-stack">
+                <i class="fa fa-circle fa-stack-2x"></i>
+                <i class="fa fa-map-marked-alt fa-stack-1x fa-inverse"></i>
+            </span>
+        </a>
+    </div>
+</div>
+<div id="mapContainer" style="height:100%;width: 100%;margin:auto;">
+</div>
+
+<!-- Locations Modal -->
+<div class="modal fade" id="LocationsModal" tabindex="-1" role="dialog" style="">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">فهرست مکان‌ها</h5>
+            </div>
+            <div class="modal-body">
+                <div class="list-group p-0">
+                    <div class="list-group-item list-group-item-primary">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="SelectAllLocations" @bind="SelectAllLocations">
+                            <label class="custom-control-label d-flex" for="SelectAllLocations">
+                                <small class="small">انتخاب همه</small>
+                            </label>
+                        </div>
+                    </div>
+                    @foreach (string locTyp in AllLocations.Select(l => l.LocationType).Distinct())
+                    {
+
+                        <button class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center" data-toggle="collapse" data-target="#@locTyp-group">
+                            @locTyp
+                            <span class="badge badge-info badge-pill">@AllLocations.Count(l => l.LocationType == locTyp)</span>
+                        </button>
+                        <div class="collapse show ml-1 mr-1" id="@locTyp-group">
+                            @foreach (LocationDto loc in AllLocations.Where(l => l.LocationType == locTyp))
+                            {
+                                <div class="list-group-item">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="Select-@loc.Id" @bind="loc.Selected">
+                                        <label class="custom-control-label d-flex" for="Select-@loc.Id">
+                                            <span class="small">@loc.Name</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-block" data-dismiss="modal"><i class="fa fa-check fa-fw"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="DeleteModal" tabindex="-1" role="dialog" style="">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title">هشدار</h5>
+            </div>
+            <div class="modal-body">
+                <p>آیا میخواهید این مکان و همه‌ی وابسته‌هایش پاک شود؟</p>
+                <p>
+                    <span class="text-secondary" id="DeleteLocationType"></span>:&nbsp;
+                    <span id="DeleteLocationName"></span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger btn-sm" id="DeleteLocationBtn" data-dismiss="modal"><i class="fa fa-check fa-fw"></i></button>
+                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal"><i class="fa fa-times fa-fw"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="ExistingLocation">
+    <div class="form text-center" style="min-width: 200px" dir="rtl">
+        <div class="collapse show">
+            <p id="LocationName"></p>
+            <p class="text-secondary" id="LocationType"></p>
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input">
+                <label class="custom-control-label">فعال</label>
+            </div>
+        </div>
+        <button id="EditCollapseButton" class="btn btn-sm btn-light btn-block" type="button" data-toggle="collapse" data-target="#EditCollapse">
+            ویرایش
+        </button>
+        <div class="collapse" id="EditCollapse">
+            <div class="form-group">
+                <input id="LocationNameInput" class="form-control form-control-sm" type="text" placeholder="نام مکان">
+                <select class="custom-select" id="TypeSelect">
+                    @foreach (LocationType locTyp in LocationTypes)
+                    {
+                        <option value="@locTyp.Id">@locTyp.Value</option>
+                    }
+                </select>
+            </div>
+            <div dir="ltr" role="group" class="btn-group d-flex justify-content-center">
+                <button class="btn btn-sm btn-danger text-white" data-toggle="modal" data-target="#DeleteModal">
+                    حذف
+                    <i class="fa fa-trash"></i>
+                </button>
+                <button class="btn btn-sm btn-secondary" id="EditLocationBtn">
+                    ویرایش
+                    <i class="fa fa-edit"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+<template id="NewLocation">
+    <div class="form" style="min-width:200px">
+        <div class="form-group">
+            <input id="NewLocationNameInput" class="form-control form-control-sm" type="text" placeholder="نام مکان">
+        </div>
+        <div class="form-group">
+            <select class="custom-select custom-select" id="TypeSelect">
+                @foreach (LocationType locTyp in LocationTypes)
+                {
+                    <option value="@locTyp.Id">@locTyp.Value</option>
+                }
+            </select>
+        </div>
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-success btn-sm" id="SaveLocationBtn">
+                <i class="fa fa-save fa-fw"></i>
+            </button>
+        </div>
+    </div>
+</template>
+@using System.Collections.ObjectModel
+@using System.ComponentModel
+@using System.Collections.Specialized
+@code {
+    bool render = false;
+    [Parameter]
+    public EventCallback OnSelectCallback { get; set; }
+    ObservableCollection<LocationDto> AllLocations = new ObservableCollection<LocationDto>();
+    List<LocationType> LocationTypes = new List<LocationType>();
+    protected override bool ShouldRender()
+    {
+        return render;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await RetrieveLocationsList();
+    }
+    public async Task RetrieveLocationsList()
+    {
+        AllLocations.CollectionChanged += LocationsChanged;
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/Locations");
+        if (apiResponse.StatusCode == 200)
+        {
+            foreach (LocationDto location in Newtonsoft.Json.JsonConvert.DeserializeObject<ObservableCollection<LocationDto>>(apiResponse.Result.ToString()))
+            {
+                AllLocations.Add(location);
+            }
+            render = true;
+            //StateHasChanged();
+        }
+        else
+        {
+        }
+        apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/LocationTypes");
+        if (apiResponse.StatusCode == 200)
+        {
+            LocationTypes = Newtonsoft.Json.JsonConvert.DeserializeObject<List<LocationType>>(apiResponse.Result.ToString());
+            render = true;
+            //StateHasChanged();
+        }
+        else
+        {
+        }
+    }
+    public bool SelectAllLocations
+    {
+        get
+        {
+            for (int d = 0; d < AllLocations.Count; d++)
+            {
+                if (AllLocations[d].Selected == false)
+                    return false;
+            }
+            return true;
+        }
+        set
+        {
+            for (int d = 0; d < AllLocations.Count; d++)
+            {
+                AllLocations[d].Selected = value;
+            }
+        }
+    }
+    void LocationsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (INotifyPropertyChanged item in e.OldItems)
+                item.PropertyChanged -= LocationPropertyChanged;
+        }
+        if (e.NewItems != null)
+        {
+            foreach (INotifyPropertyChanged item in e.NewItems)
+                item.PropertyChanged += LocationPropertyChanged;
+        }
+        JSRuntime.InvokeVoidAsync("Leaflet.MakeEditingMarkers", AllLocations);
+        OnSelectCallback.InvokeAsync(AllLocations.Where(l => l.Selected));
+        render = true;
+    }
+
+    void LocationPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        JSRuntime.InvokeVoidAsync("Leaflet.MakeEditingMarkers", AllLocations);
+        OnSelectCallback.InvokeAsync(AllLocations.Where(l => l.Selected));
+        render = true;
+    }
+    [JSInvokable]
+    public async void AddNewLocation(string Name, double Lat, double Lon, string Type)
+    {
+        LocationDto location = new LocationDto();
+        location.Name = Name;
+        location.Latitude = Math.Truncate(Lat * 1000000) / 1000000;
+        location.Longitude = Math.Truncate(Lon * 1000000) / 1000000;
+        location.LocationTypeId = Convert.ToInt32(Type);
+        ApiResponseDto apiResponse = await Http.PostJsonAsync<ApiResponseDto>("/api/Locations", location);
+        if (apiResponse.StatusCode == (int)System.Net.HttpStatusCode.OK)
+        {
+            location = Newtonsoft.Json.JsonConvert.DeserializeObject<LocationDto>(apiResponse.Result.ToString());
+            AllLocations.Add(location);
+            //await RetrieveLocationsList();
+        }
+        else
+        {
+        }
+    }
+    [JSInvokable]
+    public void SetLocationSelected(int Id, bool value)
+    {
+        AllLocations.Single(d => d.Id == Id).Selected = value;
+    }
+    [JSInvokable]
+    public async Task DeleteLocation(int Id)
+    {
+        var apiResponse = await Http.DeleteAsync($"api/Locations/{Id}");
+        if (apiResponse.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            AllLocations.Remove(AllLocations.Single(l => l.Id == Id));
+            //await RetrieveLocationsList();
+        }
+        else
+        {
+        }
+    }
+    [JSInvokable]
+    public async Task EditLocation(int Id, string Name, string Type)
+    {
+        LocationDto location = AllLocations.Single(d => d.Id == Id);
+        location.Name = Name;
+        location.LocationTypeId = Convert.ToInt32(Type);
+        ApiResponseDto apiResponse = await Http.PutJsonAsync<ApiResponseDto>($"api/Locations/{Id}", location);
+        if (apiResponse.StatusCode == (int)System.Net.HttpStatusCode.OK)
+        {
+            location = Newtonsoft.Json.JsonConvert.DeserializeObject<LocationDto>(apiResponse.Result.ToString());
+            AllLocations.Remove(AllLocations.Single(l => l.Id == Id));
+            AllLocations.Add(location);
+            //await RetrieveLocationsList();
+        }
+        else
+        {
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("Leaflet.InitMap");
+            await JSRuntime.InvokeVoidAsync("Leaflet.InitEditingFunctions", DotNetObjectReference.Create<Locations>(this));
+            await JSRuntime.InvokeVoidAsync("Leaflet.MakeEditingMarkers", AllLocations);
+            await JSRuntime.InvokeVoidAsync("Leaflet.AdjustWithMarkers");
+        }
+        render = false;
+    }
+    private LocationSearchResponseDto.Value _selectedLocation;
+    LocationSearchResponseDto.Value SelectedLocation
+    {
+        get
+        {
+            return _selectedLocation;
+        }
+        set
+        {
+            _selectedLocation = value;
+            if (_selectedLocation != null && _selectedLocation.Geom != null && _selectedLocation.Geom.Coordinates != null)
+            {
+                int zoom = 15;
+                if (_selectedLocation.Fclass == "primary")
+                    zoom = 14;
+                if (_selectedLocation.Fclass == "secondary")
+                    zoom = 16;
+                if (_selectedLocation.Type == "point")
+                    zoom = 17;
+                JSRuntime.InvokeVoidAsync("Leaflet.CenterLocation", _selectedLocation.Geom.Coordinates[1], _selectedLocation.Geom.Coordinates[0], zoom);
+            }
+        }
+    }
+    async Task<IEnumerable<LocationSearchResponseDto.Value>> SearchLocation(string SearchText)
+    {
+        using (System.Net.WebClient wc = new System.Net.WebClient())
+        {
+            // search api endpoint
+            string url = "https://map.ir/search/v2/autocomplete";
+            // essential headers
+            wc.Headers.Add("x-api-key", "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjAxYzhjNDk1MjA5NjZjNjhkYjBjY2M2NjVlMDYyZjRjN2ViN2NhMjhlOGIyZjE0N2Y3ZGNhNTliYjg2YzkwNjNjMjdkNWI5MjgwNDM2ZDkyIn0.eyJhdWQiOiI4NjA1IiwianRpIjoiMDFjOGM0OTUyMDk2NmM2OGRiMGNjYzY2NWUwNjJmNGM3ZWI3Y2EyOGU4YjJmMTQ3ZjdkY2E1OWJiODZjOTA2M2MyN2Q1YjkyODA0MzZkOTIiLCJpYXQiOjE1ODYyMzMzNjgsIm5iZiI6MTU4NjIzMzM2OCwiZXhwIjoxNTg4ODI1MzY4LCJzdWIiOiIiLCJzY29wZXMiOlsiYmFzaWMiXX0.NP3aW0f_tOHGFVGf1i1wWKDsX9FK0k0awSUJbuJqzqbgUueBI-FGb_KXGsnZ17Gf6o-wvNAOLGKtKzfApn9NLWU4YfPuh47d5bG1t3aP2Gf9ID3kc54ctdV2h7wjdi7F-hlTv-XphC2Wkp95meYPXnodNta8sguQZTK4AwY9iZNfHHUCeAFXWjMwJkJIoZ59Js2uC-QLuEKhs7yO0SDYEEQtpVUew6qq6dK2fc2XgK4vy4tSBLcyp2942rEV0r13xUht1K-uIAbgRM1Lbwt68e53LaknirbxIEprr_42OvigOcE3zKV7IqSDx7rydXSPqttG9jQ5IfDdnPfotkbSGw");
+            wc.Headers.Add("Content-Type", "application/json");
+            // create request data object
+            LocationSearchDto data = new LocationSearchDto { text = SearchText };
+            // post request to search api
+            string request = JsonConvert.SerializeObject(data);
+            string SearchOutput = "";
+            try
+            {
+                SearchOutput = await wc.UploadStringTaskAsync(new System.Uri(url, UriKind.Absolute), request);
+                LocationSearchResponseDto r = JsonConvert.DeserializeObject<LocationSearchResponseDto>(SearchOutput);
+                return r.value.Take(5);
+            }
+            catch
+            {
+                // catch error
+                return new List<LocationSearchResponseDto.Value>();
+            }
+        }
+    }
+    public string LocationDetails(LocationSearchResponseDto.Value location)
+    {
+        List<string> details = new List<string>();
+        if (!string.IsNullOrWhiteSpace(location.Neighborhood))
+        {
+            details.Add(location.Neighborhood);
+        }
+        if (!string.IsNullOrWhiteSpace(location.Region))
+        {
+            details.Add(location.Region);
+        }
+        if (details.Count > 0)
+        {
+            string result = String.Join('-', details).Replace("-", "، ");
+            return $"({result})";
+        }
+        else return "";
+    }
+}

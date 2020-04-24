@@ -1,0 +1,69 @@
+﻿<h3 id="PageTitle" style=@(Show? "" : "display:none;" ) align="center" class="text-center @CssClass">@ChildContent</h3>
+
+@code {
+    [Inject]
+    protected IJSRuntime JsRuntime { get; set; }
+
+    [Inject]
+    protected NavigationManager NavigationManager { get; set; }
+
+    [Inject]
+    protected AppState appState { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public bool Show { get; set; } = false;
+
+    [Parameter]
+    public string CssClass { get; set; } = "";
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+            NavigationManager.LocationChanged -= LocationChanged;
+    }
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += LocationChanged;
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        await SetTitle();
+    }
+
+    private async Task SetTitle()
+    {
+        try
+        {
+            string Value = "";
+            string titleContent = await JsRuntime.InvokeAsync<string>("GetPageTitle");
+            if (!string.IsNullOrWhiteSpace(titleContent))
+                Value = titleContent;
+            var pageName = (new Uri(NavigationManager.Uri)).Segments.Last();
+
+            var fullTitle = (!string.IsNullOrWhiteSpace(Value) ? Value + " | " + AppInfo.AppTitle : (pageName == "/") ? AppInfo.AppTitle : pageName + " | " + AppInfo.AppTitle);
+            appState.Title = (!string.IsNullOrWhiteSpace(Value)) ? Value : AppInfo.AppTitle;
+
+            JsRuntime.InvokeVoidAsync("SetDocumentTitle", fullTitle).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Nothing important happened
+        }
+    }
+
+    private void LocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        SetTitle();
+    }
+}

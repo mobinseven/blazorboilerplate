@@ -1,0 +1,41 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div class="input-group input-group-sm">
+    <div class="input-group-append">
+        <span class="input-group-text">تاریخ برنامه</span>
+    </div>
+    <input class="DatePicker form-control" type="text" />
+</div>
+<div class="inline-calendar"></div>
+
+@code {
+
+    [Parameter]
+    public EventCallback OnSelectCallback { get; set; }
+
+    List<Plan> plans;
+    protected override async Task OnInitializedAsync()
+    {
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/Plans");
+        if (apiResponse.StatusCode == 200)
+        {
+            plans = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Plan>>(apiResponse.Result.ToString());
+        }
+        else
+        {
+        }
+    }
+    [JSInvokable]
+    public void SetTime(int seconds)
+    {
+        OnSelectCallback.InvokeAsync(Utility.FromUnixTime(seconds)).ConfigureAwait(false);
+        StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (plans != null)
+            await JSRuntime.InvokeVoidAsync("SelectPlanDate.SetupInline", DotNetObjectReference.Create<SelectPlanDate>
+        (this), plans);
+    }
+}

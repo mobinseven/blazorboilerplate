@@ -1,0 +1,77 @@
+﻿<Router AppAssembly="typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(RawLayout)">
+            <NotAuthorized>
+                @if (!context.User.Identity.IsAuthenticated)
+                {
+                    _navigationManager.NavigateTo(" ");
+                }
+                else
+                {
+                    <div class="login-container">
+                        <LoadingBackground ShowLogoBox="true">
+                            <div class="login-body">
+                                <label>شما به این برگ دسترسی ندارید.</label><br />
+                            </div>
+                        </LoadingBackground>
+                    </div>
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <div id="components-reconnect-modal" class="components-reconnect-show">
+                    <div class="show">
+                        <div class="spinner-border text-dark" role="status">
+                        </div>
+                    </div>
+                </div>
+            </Authorizing>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <CascadingAuthenticationState>
+            <LayoutView Layout="typeof(MainLayout)">
+                <LoadingBackground ShowLogoBox="true">
+                    <div class="login-body">
+                        <h1>چنین برگی یافت نشد.</h1>
+                    </div>
+                </LoadingBackground>
+            </LayoutView>
+        </CascadingAuthenticationState>
+    </NotFound>
+</Router>
+@implements IDisposable
+@code
+    {
+    [Inject] HttpClient _httpClient { get; set; }
+    [Inject] NavigationManager _navigationManager { get; set; }
+
+#if ServerSideBlazor
+    [Inject] IHttpContextAccessor _http { get; set; }
+#endif
+
+    [Inject] AppState appState { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _httpClient.BaseAddress = new Uri(_navigationManager.BaseUri);
+
+#if ServerSideBlazor
+        // likely user refreshed page, we need to grab the cookies if they exist and pass it to the HttpClient for this request
+        if (_http != null && _http.HttpContext != null && _http.HttpContext.Request.Cookies.Any())
+        {
+            var cks = new List<string>();
+
+            foreach (var cookie in _http.HttpContext.Request.Cookies)
+            {
+                cks.Add($"{cookie.Key}={cookie.Value}");
+            }
+
+            _httpClient.DefaultRequestHeaders.Add("Cookie", String.Join(';', cks));
+        }
+#endif
+    }
+    public void Dispose()
+    {
+    }
+}

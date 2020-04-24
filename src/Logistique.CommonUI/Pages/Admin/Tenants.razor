@@ -1,0 +1,48 @@
+﻿
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+    <h3>Book Stores (Tenants) List</h3>
+@if (tenants == null)
+{
+    <LoadingBackground ShowLogoBox="true">
+        <label>Loading Tenants</label>
+    </LoadingBackground>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var TenantRow in tenants)
+            {
+            <tr>
+                <td><div>@TenantRow.Id</div></td>
+                <td><div>@TenantRow.Title</div></td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+@code {
+    List<Tenant> tenants;
+    protected override async Task OnInitializedAsync()
+    {
+        await RetrieveTenantsList();
+    }
+    public async Task RetrieveTenantsList()
+    {
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/Tenants");
+        if (apiResponse.StatusCode == 200)
+        {
+            tenants = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Tenant>>(apiResponse.Result.ToString());
+        }
+        else
+        {
+        }
+    }
+}

@@ -1,0 +1,75 @@
+@using Microsoft.AspNetCore.Components;
+@inject NavigationManager navigationManager
+@layout LoginLayout
+@inject AuthenticationStateProvider authStateProvider
+@inject AppState appState
+
+<nav class="list-group list-group-flush col-md-4" @onclick="@(e=>appState.ToggleNavState())">
+    <button @onclick="@(e=>navigationManager.NavigateTo(" "))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+        درباره‌ی @AppInfo.AppTitle
+        <i class="fa fa-info-circle fa-fw m-1"></i>
+    </button>
+    <AuthorizeView Context="authContext">
+        <Authorized>
+            <AuthorizeView Policy="@Policies.IsAdmin">
+                <Authorized>
+                    <button @onclick="@(e=>navigationManager.NavigateTo("admin/users"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                        کاربران
+                        <i class="fa fa-users fa-fw m-1"></i>
+                    </button>
+                    <button @onclick="@(e=>navigationManager.NavigateTo("newplan"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                        برنامه‌ی جدید
+                        <i class="fa fa-map fa-fw m-1"></i>
+                    </button>
+                    <button @onclick="@(e=>navigationManager.NavigateTo("Plans"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                        برنامه‌ها
+                        <i class="fa fa-layer-group fa-fw m-1"></i>
+                    </button>
+                </Authorized>
+                <NotAuthorized>
+                    <AuthorizeView Context="Tenant" Policy="@Policies.IsInTenant">
+                        <AuthorizeView Context="Manager" Policy="@Permissions.Tenant.Manager">
+                            <button @onclick="@(e=>navigationManager.NavigateTo("users"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                                کاربران
+                                <i class="fa fa-users fa-fw m-1"></i>
+                            </button>
+                            <button @onclick="@(e=>navigationManager.NavigateTo("newplan"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                                برنامه‌ی جدید
+                                <i class="fa fa-map fa-fw m-1"></i>
+                            </button>
+                        </AuthorizeView>
+                        <button @onclick="@(e=>navigationManager.NavigateTo("Plans"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                            برنامه‌ها
+                            <i class="fa fa-layer-group fa-fw m-1"></i>
+                        </button>
+                    </AuthorizeView>
+                </NotAuthorized>
+            </AuthorizeView>
+            <button class="list-group-item btn-outline-dark d-flex justify-content-between">
+                کاربر: @authContext.User.Identity.Name
+                <i class="fa fa-user-alt fa-fw m-1"></i>
+            </button>
+            <button @onclick="@(e=>LogoutClick())" href="@navigationManager.ToAbsoluteUri(" ").AbsoluteUri" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                پایان کار با برنامه
+                <i class="fa fa-sign-out-alt fa-fw m-1"></i>
+            </button>
+        </Authorized>
+        <NotAuthorized>
+            <button @onclick="@(e=>navigationManager.NavigateTo("Register"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                ثبت نام
+                <i class="fa fa-user-plus fa-fw m-1"></i>
+            </button>
+            <button @onclick="@(e=>navigationManager.NavigateTo("Login"))" class="list-group-item btn-outline-dark d-flex justify-content-between">
+                ورود
+                <i class="fa fa-sign-in-alt fa-fw m-1"></i>
+            </button>
+        </NotAuthorized>
+    </AuthorizeView>
+</nav>
+@code {
+    async void LogoutClick()
+    {
+        await ((IdentityAuthenticationStateProvider)authStateProvider).Logout();
+        navigationManager.NavigateTo(" ");
+    }
+}

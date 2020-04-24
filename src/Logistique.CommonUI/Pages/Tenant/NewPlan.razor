@@ -1,0 +1,230 @@
+﻿@page "/newplan"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager navigationManager
+@attribute [Authorize(Permissions.Tenant.Manager)]
+<Title>برنامه‌ی‌ جدید</Title>
+<div style="@((step==State.LocationSelection)? "" : "display:none;" ) height:100%;width: 100%;margin:auto;">
+    <Locations OnSelectCallback="@(e=>AttachSelectedLocations((IEnumerable<LocationDto>)e))"></Locations>
+</div>
+<div style=@((step==State.DriverSelection)? "" : "display:none;" ) class="col-md-4 overflow-auto pb-5">
+    <DriverSelector OnSelectCallback="@(e=>AttachSelectedDrivers((List<DriverDto>)e))"></DriverSelector>
+</div>
+<div style=@((step==State.DateSelection)? "" : "display:none;" ) class="col-md-4">
+    <div class="input-group input-group-sm mt-2 mb-2">
+        <div class="input-group-append">
+            <span class="input-group-text" id="inputGroup-sizing-sm">نام برنامه</span>
+        </div>
+        <input type="text" class="form-control" placeholder=" مثال: @DefaultPlanName" @bind="plan.Name">
+    </div>
+    <SelectPlanDate OnSelectCallback="@(e=>SetSelectedDate((DateTime)e))"></SelectPlanDate>
+</div>
+<div class="commands">
+    <div class="btn-group btn-block" role="group" dir="ltr">
+        @if (CanGoNext)
+        {
+            <a role="button" href="javascript:;" class="btn-icon text-success" @onclick="NextStep">
+                <span class="fa-stack">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                </span>
+            </a>
+        }
+        else
+        {
+            <a href="javascript:;" class="btn-icon text-dark" data-toggle="modal" data-target="#WarningModal">
+
+                <span class="fa-stack">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                </span>
+            </a>
+        }
+        @if (step > 0)
+        {
+            <a role="button" href="javascript:;" class="btn-icon text-secondary" @onclick="PrevStep">
+                <span class="fa-stack">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-arrow-right fa-stack-1x fa-inverse"></i>
+                </span>
+            </a>
+        }
+        @if (step == 0)
+        {
+            <a role="button" href="javascript:;" class="btn-icon text-info" data-toggle="modal" data-target="#NewLocationHelpModal">
+                <span class="fa-stack">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-question fa-stack-1x fa-inverse"></i>
+                </span>
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="WarningModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">هشدار</h5>
+            </div>
+            <div class="modal-body">
+                @ErrorMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="NewLocationHelpModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">راهنمایی</h5>
+            </div>
+            <div class="modal-body">
+                با نگه داشتن (یا کلیک راست) روی هر نقطه از نقشه، می‌توانید یک مکان جدید اضافه کنید.
+                <br />
+                باید دست‌کم ۳ مکان تعریف و انتخاب شده باشد.
+                <br />
+                باید تنها یک انبار انتخاب شده باشد.
+                <br />
+                در پایان کلید
+                <span class="fa-stack text-success">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                </span>
+                را بزنید.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-block" data-dismiss="modal">
+                    <i class="fa fa-check fa-fw"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@if (step == State.Waiting)
+{
+    <div id="components-reconnect-modal" class="components-reconnect-show">
+        <div class="show">
+            <img src="_content/Logistique.CommonUI/images/loop.gif" style="width:60vw;" />
+        </div>
+    </div>
+}
+@code {
+    enum State
+    {
+        LocationSelection,
+        DriverSelection,
+        DateSelection,
+        Waiting
+    }
+    State step = State.LocationSelection;
+    PlanDto plan = new PlanDto { DateTime = DateTime.Now.Date };
+    public void NextStep()
+    {
+        step++;
+        CanGoNext = false;
+        switch (step)
+        {
+            case State.DateSelection:
+                CanGoNext = true; break;
+            case State.Waiting: CreatePlanAsync(); break;
+        }
+    }
+    public void PrevStep()
+    {
+        step--;
+    }
+    bool CanGoNext = false;
+    string ProblemJson = "";
+    string Address = "http://213.233.161.191:8000/";
+    string SolverResult = "";
+    private string error = "";
+    string ErrorMessage
+    {
+        get
+        {
+            return error;
+        }
+        set
+        {
+            error = value;
+            // JSRuntime.InvokeVoidAsync("Modal.Show", "WarningModal");
+        }
+    }
+    string DefaultPlanName;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            string DateInPersian = await JSRuntime.InvokeAsync<string>("GetDateInPersian", plan.DateTime);
+            DefaultPlanName = $"برنامه‌ی {DateInPersian}";
+        }
+    }
+    public void AttachSelectedLocations(IEnumerable<LocationDto> SelectedLocations)
+    {
+        if (step != State.LocationSelection) return;
+        CanGoNext = false;
+        plan.Locations = new List<LocationDto>(SelectedLocations);
+        if (plan.Locations.Count(l => l.LocationType == Constants.LocationType.Depot.Value) != 1)
+        {
+            ErrorMessage = "باید یک انبار انتخاب شده باشد.";
+        }
+        else
+        {
+            if (plan.Locations.Count > 2)
+            {
+                CanGoNext = true;
+            }
+            else
+            {
+                ErrorMessage = "باید دست‌کم ۳ مکان تعریف و انتخاب شده باشد.";
+            }
+        }
+        StateHasChanged();
+    }
+    public void AttachSelectedDrivers(List<DriverDto> SelectedDrivers)
+    {
+        if (step != State.DriverSelection) return;
+        CanGoNext = false;
+        plan.Drivers = new List<DriverDto>(SelectedDrivers);
+        if (plan.Drivers.Count > 0)
+        {
+            CanGoNext = true;
+        }
+        else
+        {
+            ErrorMessage = "باید دست‌کم ۱ راننده تعریف و انتخاب شده باشد.";
+        }
+        StateHasChanged();
+    }
+    public async void SetSelectedDate(DateTime date)
+    {
+        plan.DateTime = date;
+        string DateInPersian = await JSRuntime.InvokeAsync<string>("GetDateInPersian", date);
+        DefaultPlanName = $"برنامه‌ی {DateInPersian}";
+    }
+    public async void CreatePlanAsync()
+    {
+        if (string.IsNullOrWhiteSpace(plan.Name))
+            plan.Name = DefaultPlanName;
+        ApiResponseDto apiResponse = await Http.PostJsonAsync<ApiResponseDto>("/api/Plans", plan);
+        switch (apiResponse.StatusCode)
+        {
+            case Status200OK:
+                Plan plan = Newtonsoft.Json.JsonConvert.DeserializeObject<Plan>(apiResponse.Result.ToString());
+                navigationManager.NavigateTo($"plan/{plan.Id}");
+                break;
+            case Status500InternalServerError:
+                ErrorMessage = apiResponse.Message;
+                await JSRuntime.InvokeVoidAsync("Modal.Show", "WarningModal");
+                break;
+        }
+    }
+}

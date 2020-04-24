@@ -1,0 +1,198 @@
+﻿@page "/plan/{id:int}"
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+<Title>@plan.Name</Title>
+<div id="mapContainer" style="height:100%;width: 100%;margin:auto;">
+</div>
+<AuthorizeView Policy="@Permissions.Tenant.Manager">
+    <Authorized>
+        <div style="padding:10px 10px 0;position:absolute;top:0;right:0;z-index:20;">
+            <a role="button" href="javascript:;" class="btn-icon" data-toggle="modal" data-target="#driversModal">
+                <span class="fa-stack">
+                    <i class="fa fa-circle fa-stack-2x"></i>
+                    <i class="fa fa-truck fa-stack-1x fa-inverse"></i>
+                </span>
+            </a>
+        </div>
+        <!-- Modal -->
+        <div class="modal fade" id="driversModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تغییر وضعیت نمایش رانندگان</h5>
+                    </div>
+                    <div class="modal-body">
+                        <ul class="list-group p-0">
+                            @foreach (DriverDto driver in drivers)
+                            {
+                                <li class="list-group-item">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="Select-@driver.UserName" @onclick=@(e=>ToggleDriverDisplay(driver.Id)) checked>
+                                        <label class="custom-control-label" for="Select-@driver.UserName" style="display:flex;padding:3px 2px 0px;">
+                                            <small class="small">@driver.UserName</small>
+                                        </label>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light btn-block" data-dismiss="modal"><i class="fa fa-check fa-fw"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <template id="ExistingLocation">
+            <div class="form d-flex flex-column align-items-center" style="min-width: 200px" dir="rtl">
+                <h4>
+                    <span class="text-muted" style="font-size:medium"><span id="LocationType"></span>:</span>
+                    <span id="LocationName"></span>
+                </h4>
+                <h6 class="text-info" style="font-size:medium">ایستگاه <span id="OrderValue"></span> از <span id="OrdersCount"></span> </h6>
+                <div>
+                    <span class="text-muted" style="font-size:medium">راننده:</span> <span id="DriverUsername"></span>
+                </div>
+                <button class="btn btn-sm btn-light" id="GetDirectionsBtn">
+                    <i class="fa fa-route fa-fw"></i>مسیریابی
+                </button>
+                <div dir="ltr">
+                    <button class="btn btn-info btn-sm" id="MarkerNextBtn">بعدی<i class="fa fa-arrow-left pl-2 pr-2"></i></button>
+                    <button class="btn btn-info btn-sm" id="MarkerPrevBtn"><i class="fa fa-arrow-right pl-2 pr-2"></i>قبلی</button>
+                </div>
+            </div>
+        </template>
+    </Authorized>
+    <NotAuthorized>
+        <template id="ExistingLocation">
+            <div class="form d-flex flex-column align-items-center" style="min-width: 200px" dir="rtl">
+                <h4>
+                    <span class="text-muted" style="font-size:medium"><span id="LocationType"></span>:</span>
+                    <span id="LocationName"></span>
+                </h4>
+                <h6 class="text-info" style="font-size:medium">ایستگاه <span id="OrderValue"></span> از <span id="OrdersCount"></span> </h6><div>
+                    <span class="text-muted d-none" style="font-size:medium">راننده:</span> <span id="DriverUsername"></span>
+                </div>
+                <button class="btn btn-sm btn-light" id="GetDirectionsBtn">
+                    <i class="fa fa-route fa-fw"></i>مسیریابی
+                </button>
+                <div dir="ltr">
+                    <button class="btn btn-info btn-sm" id="MarkerNextBtn">بعدی<i class="fa fa-arrow-left pl-2 pr-2"></i></button>
+                    <button class="btn btn-info btn-sm" id="MarkerPrevBtn"><i class="fa fa-arrow-right pl-2 pr-2"></i>قبلی</button>
+                </div>
+            </div>
+        </template>
+    </NotAuthorized>
+</AuthorizeView>
+
+<!-- Modal -->
+<div class="modal fade" id="WarningModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@ErrorTitle</h5>
+            </div>
+            <div class="modal-body text-left" dir="ltr">
+                @ErrorMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">
+                    <i class="fa fa-times fa-fw m-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@if (Waiting)
+{
+    <div id="components-reconnect-modal" class="components-reconnect-show">
+        <div class="show">
+            <img src="_content/Logistique.CommonUI/images/truck.gif" style="max-width:60vw;max-height:50vh;" />
+        </div>
+    </div>
+}
+@code {
+    bool Waiting = false;
+    [Parameter]
+    public int id { get; set; }
+    string PlanJson = "";
+    private string error = "";
+    string ErrorMessage
+    {
+        get
+        {
+            return error;
+        }
+        set
+        {
+            error = value;
+            JSRuntime.InvokeVoidAsync("Modal.Show", "WarningModal");
+        }
+    }
+    string ErrorTitle = "";
+    Plan plan = new Plan();
+    List<DriverDto> drivers = new List<DriverDto>();
+    ApiResponseDto apiResponse = new ApiResponseDto { Result = new object() };
+    protected override async Task OnInitializedAsync()
+    {
+        Waiting = true;
+        try
+        {
+            await RetrievePlan();
+            if (plan.Orders.Count == 0)
+            {
+                apiResponse = await Http.PutJsonAsync<ApiResponseDto>($"/api/Plans/SendToSolver/{id}", null);
+                switch (apiResponse.StatusCode)
+                {
+                    case Status200OK: await RetrievePlan(); break;
+                    case Status503ServiceUnavailable:
+                        ErrorTitle = "مشکلی در دسترسی به سرور محاسبه مسیر پیش آمد:\n";
+                        ErrorMessage = apiResponse.Message;
+                        break;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            ErrorTitle = "خطایی رخ داد:";
+            ErrorMessage = e.Message;
+        }
+        finally
+        {
+            Waiting = false;
+            StateHasChanged();
+        }
+    }
+    async Task RetrievePlan()
+    {
+        apiResponse = await Http.GetJsonAsync<ApiResponseDto>($"/api/Plans/{id}");
+        if (apiResponse.StatusCode == 200)
+        {
+            plan = Newtonsoft.Json.JsonConvert.DeserializeObject<Plan>(apiResponse.Result.ToString());
+            foreach (Order order in plan.Orders)
+            {
+                if (!drivers.Any(v => v.Id == order.DriverId))
+                {
+                    DriverDto c = JsonConvert.DeserializeObject<DriverDto>(JsonConvert.SerializeObject(order.Driver));
+                    drivers.Add(c);
+                }
+            }
+        }
+    }
+    void ToggleDriverDisplay(Guid Id)
+    {
+        foreach (Order order in plan.Orders.Where(o => o.DriverId == Id))
+        {
+            order.Done = !order.Done;
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("Leaflet.SetupForDisplay");
+        }
+        await JSRuntime.InvokeVoidAsync("Leaflet.MakeDisplayMarkers", plan.Orders);
+    }
+}

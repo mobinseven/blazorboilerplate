@@ -1,0 +1,90 @@
+﻿@page "/bookstore"
+@inject ITenantApi tenantApi
+@inject NavigationManager navigationManager
+@using  Logistique.CommonUI.Pages.Admin
+<div class="accordion" id="accordion">
+    <AuthorizeView>
+        <div class="card">
+            <div class="card-header" id="headingTwo">
+                <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo">
+                        Books Panel
+                    </button>
+                </h2>
+            </div>
+            <div id="collapseTwo" class="collapse" data-parent="#accordion">
+                <div class="card-body">
+                    <Plans></Plans>
+                </div>
+            </div>
+        </div>
+        <AuthorizeView Context="AdminContext" Policy="@Policies.IsAdmin">
+            <Authorized>
+                <div class="card">
+                    <div class="card-header" id="headingThree">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree">
+                                Bookstores
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseThree" class="collapse" data-parent="#accordion">
+                        <div class="card-body">
+                            <Tenants></Tenants>
+                        </div>
+                    </div>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="card">
+                    <div class="card-header" id="headingThree">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree">
+                                My Tenant
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseThree" class="collapse" data-parent="#accordion">
+                        <div class="card-body">
+                            <AuthorizeView Context="TenantContext" Policy="@Policies.IsInTenant">
+                                <Authorized>
+                                    <h3>Hello form @Tenant.Title, @TenantContext.User.Identity.Name!</h3>
+                                    <AuthorizeView Context="ManagerContext" Policy="@Permissions.Tenant.Manager">
+                                        <ul class="nav flex-column">
+                                            <li class="nav-item">
+                                                <a class="nav-link active" href="@navigationManager.ToAbsoluteUri("/admin/users").AbsoluteUri">Users</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" href="@navigationManager.ToAbsoluteUri("/admin/roles").AbsoluteUri">Roles</a>
+                                            </li>
+                                        </ul>
+                                    </AuthorizeView>
+                                </Authorized>
+                                <NotAuthorized>
+                                    <Create></Create>
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </div>
+                    </div>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </AuthorizeView>
+</div>
+@code {
+
+    Tenant Tenant;
+    [CascadingParameter]
+    Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = (await authenticationStateTask).User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            Tenant = await tenantApi.GetTenant();
+        }
+    }
+
+}

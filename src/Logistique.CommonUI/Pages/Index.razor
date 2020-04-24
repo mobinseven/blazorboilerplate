@@ -1,0 +1,76 @@
+﻿@page "/"
+@inject NavigationManager navigationManager
+<Title>برگ نخست</Title>
+<Logo />
+<div class="col-md-4 align-self-center">
+    <div class="d-flex justify-content-center flex-column">
+        <AuthorizeView>
+            <Authorized>
+                <AuthorizeView Context="Admin" Policy="@Policies.IsAdmin">
+                    <Authorized>
+                        <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="admin/users" style="font-size:xx-large">
+                            کاربران
+                            <i class="fa fa-users fa-fw"></i>
+                        </a>
+                        <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="newPlan" style="font-size:xx-large">
+                            برنامه‌ی جدید
+                            <i class="fa fa-map fa-fw"></i>
+                        </a>
+                        <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="Plans" style="font-size:xx-large">
+                            فهرست برنامه‌ها
+                            <i class="fa fa-layer-group fa-fw"></i>
+                        </a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <AuthorizeView Context="Tenant" Policy="@Policies.IsInTenant">
+                            <Authorized>
+                                <AuthorizeView Context="User" Policy="@Permissions.Tenant.Manager">
+                                    <Authorized>
+                                        <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="users" style="font-size:xx-large">
+                                            کاربران
+                                            <i class="fa fa-users fa-fw"></i>
+                                        </a>
+                                        <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="newPlan" style="font-size:xx-large">
+                                            برنامه‌ی جدید
+                                            <i class="fa fa-map fa-fw"></i>
+                                        </a>
+                                    </Authorized>
+                                    <NotAuthorized>
+                                        @* TODO : Today plans for driver *@
+                                    </NotAuthorized>
+                                </AuthorizeView>
+                                <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="Plans" style="font-size:xx-large">
+                                    فهرست برنامه‌ها
+                                    <i class="fa fa-layer-group fa-fw"></i>
+                                </a>
+                            </Authorized>
+                            <NotAuthorized>
+                                <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="NewTenant" style="font-size:xx-large">
+                                    ثبت نام برای شرکت
+                                    <i class="fa fa-truck fa-fw"></i>
+                                </a>
+                                <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="acceptinvitation" style="font-size:xx-large">
+                                    <div>پذیرش دعوتنامه از شرکت</div>
+                                    <i class="fa fa-handshake fa-fw"></i>
+                                    <br />
+                                    <small class="small text-muted">در صورتی که پیامک کد فراخوانی برای شما فرستاده شده است</small>
+                                </a>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </Authorized>
+            <NotAuthorized>
+                <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="Login" style="font-size:xx-large">
+                    ورود
+                    <i class="fa fa-sign-in-alt m-1"></i>
+                </a>
+                <a class="shadow p-3 mb-5 bg-white rounded text-center text-decoration-none" href="Register" style="font-size:xx-large">
+                    ثبت نام
+                    <i class="fa fa-user-plus m-1">
+                    </i>
+                </a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</div>

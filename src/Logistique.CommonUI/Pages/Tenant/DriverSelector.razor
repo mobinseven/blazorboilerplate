@@ -1,0 +1,95 @@
+﻿@inject HttpClient Http
+
+<table class="table table-striped table-bordered table-sm">
+    <thead>
+        <tr @onclick="(e=>SelectAllDrivers=!SelectAllDrivers)">
+            <th>
+                رانندگان
+            </th>
+            <th dir="ltr" style="width: 1%;white-space: nowrap;vertical-align:middle;">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="SelectAllDrivers" @bind="SelectAllDrivers" readonly>
+                    <label class="custom-control-label" for="SelectAllDrivers">
+                        <small class="small">انتخاب همه</small>
+                    </label>
+                </div>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var driver in AllDrivers)
+        {
+            <tr @onclick="(e=>Select(driver))">
+                <td>@driver.UserName</td>
+                <td dir="ltr">
+                    <div class="custom-control custom-checkbox">
+                        <input @bind="@driver.Selected" type="checkbox" class="custom-control-input" id="Check-@driver.UserName" readonly>
+                        <label class="custom-control-label" for="Check-@driver.UserName"></label>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@code {
+    ApiResponseDto apiResponse;
+    List<DriverDto> AllDrivers = new List<DriverDto>();
+    bool render = false;
+    [Parameter]
+    public EventCallback OnSelectCallback { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RetrieveUserListAsync();
+        SelectAllDrivers = true;
+    }
+    void Select(DriverDto driver)
+    {
+        AllDrivers.Find(v => v == driver).Selected = !AllDrivers.Find(v => v == driver).Selected;
+    }
+    public bool SelectAllDrivers
+    {
+        get
+        {
+            for (int v = 0; v < AllDrivers.Count; v++)
+            {
+                if (AllDrivers[v].Selected == false)
+                    return false;
+            }
+            return true;
+        }
+        set
+        {
+            for (int v = 0; v < AllDrivers.Count; v++)
+            {
+                AllDrivers[v].Selected = value;
+            }
+            render = true;
+        }
+    }
+    public async Task RetrieveUserListAsync()
+    {
+        apiResponse = await Http.GetJsonAsync<ApiResponseDto>("api/Admin/Users");
+
+        if (apiResponse.StatusCode == 200)
+        {
+            AllDrivers = Newtonsoft.Json.JsonConvert.DeserializeObject<List<DriverDto>>(apiResponse.Result.ToString());
+            render = true;
+
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            AllDrivers.Remove(AllDrivers.Single(u => u.UserName == user.Identity.Name));
+        }
+        else
+        {
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        render = false;
+        OnSelectCallback.InvokeAsync(AllDrivers.Where(v => v.Selected).ToList()).ConfigureAwait(false);
+    }
+}

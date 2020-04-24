@@ -1,0 +1,108 @@
+﻿@page "/NewTenant"
+@inject HttpClient Http
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<AuthorizeView Policy="@Policies.IsInTenant">
+    @{
+        navigationManager.NavigateTo(" ");
+    }
+</AuthorizeView>
+<Logo />
+<Title Show="true">ثبت نام شرکت</Title>
+
+<div class="col-md-4 mt-4 mb-5 align-self-center">
+    <div class="input-group mb-3">
+        <input class="form-control @(state==State.TitleAvailable?"is-valid":(state==State.TitleUnavailable)?"is-invalid":"")" @bind="@tenant.Title" placeholder="نام شرکت" />
+    </div>
+    <button class="btn btn-info btn-block mb-3" @onclick=CheckTitle>
+        بررسی نام
+        <i class="fa fa-search m-1">
+        </i>
+    </button>
+    @switch (state)
+    {
+        case State.EnterTitle:
+            break;
+        case State.Validating:
+            <div class="spinner-grow text-info text-center" role="status">
+            </div>
+            break;
+        case State.TitleAvailable:
+            <div class="alert alert-success" role="alert">
+                نام درخواستی آزاد است.
+            </div>
+            <button class="btn btn-success btn-block mb-3" @onclick=CreateTenantAsync>
+                ثبت نام شرکت
+                <i class="fa fa-building m-1">
+                </i>
+            </button>
+            break;
+        case State.TitleUnavailable:
+            <div class="alert alert-warning" role="alert">
+                نام درخواستی آزاد نیست.
+            </div>
+            break;
+        case State.Success:
+            <div class="card border-success mb-3">
+                <div class="card-body text-success text-center">
+                    <h5 class="card-title"><i class="fa fa-check-circle fa-4x"></i></h5>
+                    <p class="card-text">ثبت نام شرکت شما انجام شد.</p>
+                </div>
+            </div>
+            break;
+        case State.Error:
+            <div class="alert alert-danger" role="alert">
+                <h5 class="card-title text-center"><i class="fa fa-times-circle"></i></h5>
+                <p class="card-text">خطایی رخ داد.</p>
+                <p class="card-text">@Error</p>
+            </div>
+            break;
+    }
+</div>
+@code {
+    enum State
+    {
+        EnterTitle,
+        TitleAvailable,
+        TitleUnavailable,
+        Validating,
+        Success,
+        Error
+    }
+    string Error = "";
+    State state = State.EnterTitle;
+    Tenant tenant = new Tenant();
+    public async Task CreateTenantAsync()
+    {
+        ApiResponseDto apiResponse = await Http.PostJsonAsync<ApiResponseDto>("api/Tenants", tenant);
+        if (apiResponse.StatusCode == 200)
+        {
+            state = State.Success;
+            await ((IdentityAuthenticationStateProvider)authStateProvider).Logout();
+            navigationManager.NavigateTo("Login");
+        }
+        else
+        {
+            Error = apiResponse.Message;
+            state = State.Error;
+        }
+    }
+    public async Task CheckTitle()
+    {
+        state = State.Validating;
+        StateHasChanged();
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>($"api/Tenants/TitleExists/{tenant.Title}");
+        if (apiResponse.StatusCode == 200)
+        {
+            BoolDto exists = Newtonsoft.Json.JsonConvert.DeserializeObject<BoolDto>(apiResponse.Result.ToString());
+            if (!exists.Boolean) { state = State.TitleAvailable; } else { state = State.TitleUnavailable; };
+            StateHasChanged();
+        }
+        else
+        {
+            Error = apiResponse.Message;
+            state = State.Error;
+        }
+    }
+}

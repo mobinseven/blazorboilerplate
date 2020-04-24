@@ -14,5 +14,8 @@ namespace BlazorBoilerplate.Shared.Dto.Account
 
         public string __RequestVerificationToken { get; set; }
         public string ReturnUrl { get; set; }
+
+        public string PhoneNumber { get; set; }
+        public string VerificationCode { get; set; }
     }
 }

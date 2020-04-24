@@ -77,7 +77,7 @@ namespace BlazorBoilerplate.Server.Managers
                 var users = await _userManager.GetUsersForClaimAsync(tenantClaim);
                 foreach (var user in users)
                 {
-                    await RemoveFromTenant(user.Id, id);
+                    await RemoveFromTenant(user.UserName, id);
                 }
                 await _tenantStore.DeleteById(id);
                 return new ApiResponse(Status200OK, "Soft Delete Tenant");
@@ -88,10 +88,10 @@ namespace BlazorBoilerplate.Server.Managers
             }
         }
 
-        public async Task<ApiResponse> AddToTenant(Guid UserId, string TenantId)
+        public async Task<ApiResponse> AddToTenant(string userName, string TenantId)
         {
             var tenant = _tenantStore.GetById(TenantId);
-            ApplicationUser appUser = await _userManager.FindByIdAsync(UserId.ToString());
+            ApplicationUser appUser = await _userManager.FindByIdAsync(userName);
             IList<Claim> userClaims = await _userManager.GetClaimsAsync(appUser);
             Claim claim = new Claim("TenantId", tenant.Identifier);
             if (!userClaims.Any(c => c.Type == claim.Type)) // We currently accept only one tenant claim for each user
@@ -102,10 +102,10 @@ namespace BlazorBoilerplate.Server.Managers
             return new ApiResponse(Status400BadRequest, "Failed to add user");
         }
 
-        public async Task<ApiResponse> RemoveFromTenant(Guid UserId, string TenantId)
+        public async Task<ApiResponse> RemoveFromTenant(string userName, string TenantId)
         {
             var tenant = _tenantStore.GetById(TenantId);
-            ApplicationUser appUser = await _userManager.FindByIdAsync(UserId.ToString());
+            ApplicationUser appUser = await _userManager.FindByNameAsync(userName);
             IList<Claim> userClaims = await _userManager.GetClaimsAsync(appUser);
             Claim claim = new Claim("TenantId", tenant.Identifier);
             if (userClaims.Any(c => c.Type == claim.Type))

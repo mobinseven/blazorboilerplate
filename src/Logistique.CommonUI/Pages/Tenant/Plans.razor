@@ -1,0 +1,222 @@
+﻿@page "/plans"
+@inject LogestiqueApi logestiqueApi
+@inject HttpClient Http
+@inject NavigationManager navigationManager
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@attribute [Authorize]
+@using  Logistique.CommonUI.Services.Implementations
+<Title>برنامه‌ها</Title>
+@if (plans == null)
+{
+    <LoadingBackground ShowLogoBox="true">
+        در حال دریافت برنامه‌ها
+    </LoadingBackground>
+}
+else
+{
+    <h3 class="text-center">فهرست برنامه‌ها</h3>
+    <AuthorizeView Policy="@Permissions.Tenant.Manager">
+        <button @onclick="@(e=>navigationManager.NavigateTo("newplan"))" class="btn btn-success btn-sm" style="font-size:larger;">
+            برنامه‌ی جدید
+            <i class="fas fa-calendar-plus m-1"></i>
+        </button>
+    </AuthorizeView>
+    @switch (step)
+    {
+        case 0:
+            <div class="flex-filler align-self-center col-md-4">
+                <small class="small">تاریخ مورد نظر را انتخاب کنید:</small>
+                <SelectPlanDate OnSelectCallback="@(e=>SelectedDate=((DateTime)e))"></SelectPlanDate>
+            </div>
+            break;
+        case 1:
+            <h5 class="text-center">برنامه‌های روز @Utility.ConvertToFormattedPersianDate(SelectedDate)</h5>
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <td>نام برنامه</td>
+                        <td>گزینه‌ها</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (Plan pl in plans.Where(p => p.Date.Equals(SelectedDate)))
+                    {
+                        <tr>
+                            <td>@pl.Name</td>
+                            <td>
+                                <div class="btn-group" role="group" dir="ltr">
+                                    <AuthorizeView Policy="@Permissions.Tenant.Manager">
+                                        @*@if (pl.Orders.Count == 0)
+                                            {
+                                                <button class="btn btn-secondary btn-sm" @onclick="(e=>RetryToSolve(pl.Id))"><i class="fa fa-sync fa-fw"></i></button>
+                                            }*@
+
+                                        <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#DeleteModal" @onclick="@(e=>SelectedPlan=pl)"><i class="fa fa-trash fa-fw"></i></button>
+                                    </AuthorizeView>
+                                    <button class="btn btn-info btn-sm" @onclick="@(e=>navigationManager.NavigateTo($"plan/{pl.Id}"))"><i class="fa fa-eye fa-fw"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            break;
+    }
+
+    <div class="commands">
+        <div class="btn-group btn-block" role="group" dir="ltr">
+            @if (step == 0)
+            {
+                @if (plans.Any(p => p.Date == SelectedDate))
+                {
+                    <a role="button" href="javascript:;" class="btn-icon text-success" @onclick="NextStep">
+                        <span class="fa-stack">
+                            <i class="fa fa-circle fa-stack-2x"></i>
+                            <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                        </span>
+                    </a>
+                }
+                else
+                {
+                    ErrorMessage = "در روز انتخاب شده هیچ برنامه‌ای تعریف نشده است.";
+                    <a href="javascript:;" class="btn-icon text-dark" data-toggle="toast" data-target="#WarningToast">
+                        <span class="fa-stack">
+                            <i class="fa fa-circle fa-stack-2x"></i>
+                            <i class="fa fa-check fa-stack-1x fa-inverse"></i>
+                        </span>
+                    </a>
+                }
+            }
+            @if (step > 0)
+            {
+                <a role="button" href="javascript:;" class="btn-icon text-secondary" @onclick="PrevStep">
+                    <span class="fa-stack">
+                        <i class="fa fa-circle fa-stack-2x"></i>
+                        <i class="fa fa-arrow-right fa-stack-1x fa-inverse"></i>
+                    </span>
+                </a>
+            }
+        </div>
+    </div>
+
+}
+
+<!-- Delete Modal -->
+<div class="modal fade" id="DeleteModal" tabindex="-1" role="dialog" style="">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title">هشدار</h5>
+            </div>
+            <div class="modal-body">
+                <p>آیا میخواهید این برنامه پاک شود؟</p>
+                <p>
+                    <span class="text-secondary">@Utility.ConvertToFormattedPersianDate(SelectedPlan.Date)</span>:&nbsp;
+                    <span>@SelectedPlan.Name</span>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger btn-sm" @onclick="(e=>DeletePlanAsync(SelectedPlan.Id))" data-dismiss="modal"><i class="fa fa-check fa-fw"></i></button>
+                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal"><i class="fa fa-times fa-fw"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Warning Toast -->
+<div role="alert" class="toast" data-delay="5000" id="WarningToast">
+    <div class="toast-body">
+        @ErrorMessage
+    </div>
+</div>
+@code {
+    List<Plan> plans;
+    Plan SelectedPlan = new Plan();
+    private DateTime _date = DateTime.Now.Date;
+    DateTime SelectedDate
+    {
+        get
+        {
+            return _date;
+        }
+        set
+        {
+            _date = value.Date;
+        }
+    }
+    string ErrorMessage = "";
+    int step = 0;
+    void NextStep()
+    {
+        step++;
+        switch (step)
+        {
+            case 1:
+                if (plans
+                .Count(p => p.Date == SelectedDate) == 1)
+                {
+                    Plan pl = plans.Single(p => p.Date == SelectedDate);
+                    navigationManager.NavigateTo($"plan/{pl.Id}");
+                }
+                break;
+        }
+    }
+    void PrevStep()
+    {
+        step--;
+        if (step != 1)
+            JSRuntime.InvokeVoidAsync("DestroyDataTable");
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await RetrievePlansList();
+    }
+    public async Task RetrievePlansList()
+    {
+        //ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/Plans/WithOrders");
+        ApiResponseDto apiResponse = await Http.GetJsonAsync<ApiResponseDto>("/api/Plans");
+        if (apiResponse.StatusCode == 200)
+        {
+            plans = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Plan>>(apiResponse.Result.ToString());
+        }
+        else
+        {
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("Toast.Init");
+        }
+        if (step == 1)
+            await JSRuntime.InvokeVoidAsync("MakeDataTable", false, false);
+    }
+    public async Task DeletePlanAsync(int Id)
+    {
+        var apiResponse = await Http.DeleteAsync($"api/Plans/{Id}");
+        if (apiResponse.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            await RetrievePlansList();
+        }
+        else
+        {
+        }
+    }
+    public async Task RetryToSolve(int Id)
+    {
+        var apiResponse = await Http.PutAsync($"api/Plans/SendToSolver/{Id}", null);
+        if (apiResponse.StatusCode == System.Net.HttpStatusCode.OK)
+        {
+            await RetrievePlansList();
+        }
+        else
+        {
+        }
+    }
+    public void Dispose()
+    {
+        JSRuntime.InvokeVoidAsync("DestroyDataTable");
+    }
+}

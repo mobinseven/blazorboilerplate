@@ -28,6 +28,7 @@ namespace BlazorBoilerplate.Storage
         public DbSet<Message> Messages { get; set; }
         private IUserSession _userSession { get; set; }
         public DbSet<DbLog> Logs { get; set; }
+        public DbSet<SmsInvitation> SmsInvitations { get; set; }
 
         public ApplicationDbContext(TenantInfo tenantInfo, DbContextOptions<ApplicationDbContext> options, IUserSession userSession)
             : base(tenantInfo, options)
@@ -48,6 +49,7 @@ namespace BlazorBoilerplate.Storage
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<IdentityRole<Guid>>().IsMultiTenant();
+            modelBuilder.Entity<SmsInvitation>().IsMultiTenant();
 
             modelBuilder.Entity<Message>().ToTable("Messages");
 

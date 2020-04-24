@@ -27,5 +27,20 @@ namespace BlazorBoilerplate.Shared.Dto.Account
         [Display(Name = "ConfirmPassword", ResourceType = typeof(Strings))]
         [Compare("Password", ErrorMessageResourceType = typeof(Strings), ErrorMessageResourceName = "PasswordConfirmationFailed")]
         public string PasswordConfirm { get; set; }
+
+        [DataType(DataType.PhoneNumber)]
+        [Phone]
+        [Display(Name = "Phone Number")]
+        public string PhoneNumber { get; set; }
+
+        [DataType(DataType.Text)]
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; }
+
+        [DataType(DataType.Text)]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; }
+
+        public string VerificationCode { get; set; }
     }
 }
