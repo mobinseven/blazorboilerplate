@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 namespace BlazorBoilerplate.Infrastructure.Storage.DataModels
 {
     [Permissions(Actions.Delete)]
-    public partial class Todo : IAuditable, ISoftDelete
+    public partial class Todo : ISoftDelete
     {
         [Key]
         public long Id { get; set; }

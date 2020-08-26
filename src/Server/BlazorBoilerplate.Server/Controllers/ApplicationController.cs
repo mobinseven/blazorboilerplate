@@ -62,7 +62,7 @@ namespace BlazorBoilerplate.Server.Controllers
         [HttpGet]
         public IQueryable<Todo> Todos()
         {
-            return persistenceManager.GetEntities<Todo>().Include(i => i.CreatedBy).Include(i => i.ModifiedBy).OrderBy(i => i.Id);
+            return persistenceManager.GetEntities<Todo>().OrderBy(i => i.Id);
         }
 
         [HttpGet]
